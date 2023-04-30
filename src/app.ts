@@ -3,21 +3,42 @@ import path from "path";
 import express, { Request, Response, NextFunction } from "express";
 import session from "express-session";
 import cookieParser from "cookie-parser";
-import { Currency } from "./models/currency";
+import Currency from "./models/currency";
 import { CurrencyService } from "./services/currency-service";
 import { ExchangeRateService } from "./services/exchange-rate-service";
 import { UserService } from "./services/user-service";
 import moment from "moment";
 import swaggerUi from "swagger-ui-express";
+import { Sequelize } from 'sequelize-typescript';
+import User from "./models/user";
+import ExchangeRate from "./models/exchange-rate";
 
 const app = express();
 const port = 3000;
 
 const apiUrl: string = "/api/v1";
 
-const userService = new UserService();
-const currencyService = new CurrencyService();
-const exchangeRateService = new ExchangeRateService(currencyService);
+const sequelize = new Sequelize({
+	repositoryMode: true,
+	host: "localhost",
+	database: 'CurrencyExchange',
+	dialect: 'mssql',
+	username: 'idiordiev',
+	password: 'qwerty123',
+	models: [__dirname + '/models'],
+	dialectOptions: {
+		encrypt: true,
+		port: 1433
+	}
+});
+
+const userRepository = sequelize.getRepository(User);
+const currencyRepository = sequelize.getRepository(Currency);
+const exchangeRateRepository = sequelize.getRepository(ExchangeRate);
+
+const userService = new UserService(userRepository);
+const currencyService = new CurrencyService(currencyRepository);
+const exchangeRateService = new ExchangeRateService(exchangeRateRepository, currencyService);
 
 const swaggerSpec = JSON.parse(fs.readFileSync(path.join(__dirname, 'swagger.json'), 'utf8')) as object;
 
@@ -69,17 +90,17 @@ function checkNotAuthenticated(
 	res.status(200).send();
 }
 
-app.post(apiUrl + "/login", checkNotAuthenticated, (req, res) => {
+app.post(apiUrl + "/login", checkNotAuthenticated, async (req, res) => {
 	let email = req.body.email;
 	let password = req.body.password;
 
-	let user = userService.getUserByEmailAndPassword(email, password);
+	let user = await userService.getUserByEmailAndPassword(email, password);
 	if (!user) {
 		res.status(401).send("Invalid email or password");
 		return;
 	}
 
-	let token = userService.login(email, password);
+	let token = await userService.login(email, password);
 	res.setHeader("Authorization", "Bearer " + token);
 
 	res.status(200).send();
@@ -91,13 +112,13 @@ app.get(apiUrl + "/logout", (req, res) => {
 	res.status(200).send();
 });
 
-app.get(apiUrl + "/currencies", (req, res) => {
-	let currencies = currencyService.getCurrencies();
+app.get(apiUrl + "/currencies", async (req, res) => {
+	let currencies = await currencyService.getCurrencies();
 
 	res.status(200).send(currencies);
 });
 
-app.get(apiUrl + "/currencies/:id/history", (req, res) => {
+app.get(apiUrl + "/currencies/:id/history", async (req, res) => {
 	const currentDate = moment().toDate();
 	const tomorrowDate = moment().add(1, "days").toDate();
 
@@ -121,7 +142,7 @@ app.get(apiUrl + "/currencies/:id/history", (req, res) => {
 		: tomorrowDateOnly;
 
 	const exchangeRates =
-		exchangeRateService.getExchangeRatesForCurrencyOnDates(
+		await exchangeRateService.getExchangeRatesForCurrencyOnDates(
 			currencyId,
 			fromDate,
 			toDate
@@ -140,11 +161,11 @@ app.get(apiUrl + "/currencies/:id/history", (req, res) => {
 	res.status(200).send(response);
 });
 
-app.post(apiUrl + "/currencies", checkAuthenticated, (req, res) => {
+app.post(apiUrl + "/currencies", checkAuthenticated, async (req, res) => {
 	let name: string = req.body.name;
 
 	try {
-		currencyService.addCurrency(name);
+		await currencyService.addCurrency(name);
 	} catch (e) {
 		res.status(400).send((<Error>e).message);
 		return;
@@ -153,11 +174,9 @@ app.post(apiUrl + "/currencies", checkAuthenticated, (req, res) => {
 	res.status(201).send();
 });
 
-app.put(apiUrl + "/currencies/edit/:id", checkAuthenticated, (req, res) => {
-	let currencyToUpdate = new Currency(parseInt(req.params.id), req.body.name);
-
+app.put(apiUrl + "/currencies/edit/:id", checkAuthenticated, async (req, res) => {
 	try {
-		currencyService.updateCurrency(currencyToUpdate);
+		await currencyService.updateCurrency(parseInt(req.params.id), req.body.name);
 	} catch (e) {
 		res.status(400).send((<Error>e).message);
 		return;
@@ -169,11 +188,11 @@ app.put(apiUrl + "/currencies/edit/:id", checkAuthenticated, (req, res) => {
 app.delete(
 	apiUrl + "/currencies/delete/:id",
 	checkAuthenticated,
-	(req, res) => {
+	async (req, res) => {
 		let id = parseInt(req.params.id);
 
 		try {
-			currencyService.deleteCurrencyById(id);
+			await currencyService.deleteCurrencyById(id);
 		} catch (e) {
 			res.status(400).send((<Error>e).message);
 			return;
@@ -183,20 +202,20 @@ app.delete(
 	}
 );
 
-app.get(apiUrl + "/exchange-rates", (req, res) => {
-	let exchangeRates = exchangeRateService.getExchangeRatesOnDay(new Date());
+app.get(apiUrl + "/exchange-rates", async (req, res) => {
+	let exchangeRates = await exchangeRateService.getExchangeRatesOnDay(new Date());
 
 	res.status(200).send(exchangeRates);
 });
 
-app.post(apiUrl + "/exchange-rates", checkAuthenticated, (req, res) => {
+app.post(apiUrl + "/exchange-rates", checkAuthenticated, async (req, res) => {
 	let date = new Date(req.body.date);
 	let fromCurrencyId = req.body.fromCurrency;
 	let toCurrencyId = req.body.toCurrency;
 	let rate = parseFloat(req.body.rate);
 
 	try {
-		exchangeRateService.addExchangeRate(
+		await exchangeRateService.addExchangeRate(
 			date,
 			fromCurrencyId,
 			toCurrencyId,
@@ -210,12 +229,12 @@ app.post(apiUrl + "/exchange-rates", checkAuthenticated, (req, res) => {
 	res.status(201).send();
 });
 
-app.put(apiUrl + "/exchange-rate/edit/:id", checkAuthenticated, (req, res) => {
+app.put(apiUrl + "/exchange-rate/edit/:id", checkAuthenticated, async (req, res) => {
 	let id = parseInt(req.params.id);
 	let rate = parseFloat(req.body.rate);
 
 	try {
-		exchangeRateService.updateExchangeRate(id, rate);
+		await exchangeRateService.updateExchangeRate(id, rate);
 	} catch (e) {
 		res.status(400).send((<Error>e).message);
 		return;
@@ -227,11 +246,11 @@ app.put(apiUrl + "/exchange-rate/edit/:id", checkAuthenticated, (req, res) => {
 app.delete(
 	apiUrl + "/exchange-rates/delete/:id",
 	checkAuthenticated,
-	(req, res) => {
+	async (req, res) => {
 		let id = parseInt(req.params.id);
 
 		try {
-			exchangeRateService.deleteExchangeRateById(id);
+			await exchangeRateService.deleteExchangeRateById(id);
 		} catch (e) {
 			res.status(400).send((<Error>e).message);
 			return;

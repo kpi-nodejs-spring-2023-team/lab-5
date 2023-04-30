@@ -1,19 +1,35 @@
-import { Currency } from "./currency";
+import Currency from "./currency";
+import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 
-export class ExchangeRate {
-  id: number;
-  fromCurrency: Currency;
-  toCurrency: Currency;
-  date: Date;
-  rate: number;
-  reversedRateId: number;
+@Table
+export default class ExchangeRate extends Model {
+  @Column({ primaryKey: true, type: DataType.INTEGER })
+  id!: number;
 
-  constructor(id: number, fromCurrency: Currency, toCurrency: Currency, date: Date, rate: number, reversedRateId: number) {
-    this.id = id;
-    this.fromCurrency = fromCurrency;
-    this.toCurrency = toCurrency;
-    this.date = date;
-    this.rate = rate;
-    this.reversedRateId = reversedRateId;
-  }
+  @Column({ type: DataType.INTEGER })
+  @ForeignKey(() => Currency)
+  fromCurrencyId!: number;
+
+  @BelongsTo(() => Currency)
+  fromCurrency!: Currency;
+
+  @Column({ type: DataType.INTEGER })
+  @ForeignKey(() => Currency)
+  toCurrencyId!: number;
+
+  @BelongsTo(() => Currency)
+  toCurrency!: Currency;
+
+  @Column({ type: DataType.DATEONLY })
+  date!: Date;
+
+  @Column({ type: DataType.DECIMAL })
+  rate!: number;
+
+  @Column({ type: DataType.INTEGER })
+  @ForeignKey(() => ExchangeRate)
+  reversedRateId!: number;
+
+  @BelongsTo(() => ExchangeRate)
+  reversedRate!: ExchangeRate;
 }

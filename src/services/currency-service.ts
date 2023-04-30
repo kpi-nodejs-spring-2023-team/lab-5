@@ -1,56 +1,47 @@
-import { Currency } from "../models/currency";
+import Currency from "../models/currency";
+import { Repository } from "sequelize-typescript";
 
 export class CurrencyService {
-	private lastId: number;
-	private currencies: Currency[];
+	private readonly currencyRepository: Repository<Currency>
 
-	constructor() {
-		this.lastId = 0;
-		this.currencies = [];
-		this.addCurrency("UAH");
-		this.addCurrency("USD");
+	constructor(currencyRepository: Repository<Currency>) {
+		this.currencyRepository = currencyRepository;
 	}
 
-	getCurrencies() {
-		return this.currencies;
+	async getCurrencies() : Promise<Currency[]> {
+		return await this.currencyRepository.findAll();
 	}
 
-	getCurrencyById(id: number) {
-		return this.currencies.find((c) => c.id == id);
+	async getCurrencyById(id: number) : Promise<Currency | null> {
+		return await this.currencyRepository.findByPk(id);
 	}
 
-	addCurrency(name: string) {
-		let currency = new Currency(this.lastId++, name);
-		this.currencies.push(currency);
-
-        if (!name){
-            throw new Error("Cannot add currency with empty name");
-        }
-
-		return currency.id;
-	}
-
-	updateCurrency(currency: Currency) {
-		let index = this.currencies.findIndex((c) => c.id === currency.id);
-
-        if (!currency.name){
-            throw new Error("Cannot set empty currency name.");
-        }
-
-		if (index === -1) {
-			throw new Error("Cannot find currency index.");
+	async addCurrency(name: string) : Promise<Currency> {
+		if (!name) {
+			throw new Error("Cannot add currency with empty name");
 		}
 
-		this.currencies[index] = currency;
+		let currency = new Currency({name: name});
+		await currency.save();
+
+		return currency;
 	}
 
-	deleteCurrencyById(id: number) {
-		let index = this.currencies.findIndex((c) => c.id === id);
-
-		if (index === -1) {
-			throw new Error("Cannot find currency index.");
+	async updateCurrency(currencyId: number, name: string) {
+		if (!name) {
+			throw new Error("Cannot set empty currency name.");
 		}
 
-		this.currencies.splice(index, 1);
+		await this.currencyRepository.update(
+			{
+				name: name
+			},
+			{
+				where: {id: currencyId}
+			});
+	}
+
+	async deleteCurrencyById(id: number) {
+		await this.currencyRepository.destroy()
 	}
 }

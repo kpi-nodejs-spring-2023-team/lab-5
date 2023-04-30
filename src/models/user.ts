@@ -1,11 +1,15 @@
-export class User {
-  id: number;
-  email: string;
-  password: string;
+import {Column, DataType, Max, Model, PrimaryKey, Table} from "sequelize-typescript";
 
-  constructor(id: number, email: string, password:string) {
-    this.id = id;
-    this.email = email;
-    this.password = password;
-  }
+@Table
+export default class User extends Model {
+  @Column({ primaryKey: true, type: DataType.INTEGER })
+  id!: number;
+
+  @Max(120)
+  @Column({ type: DataType.TEXT })
+  email!: string;
+
+  @Max(64)
+  @Column({ type: DataType.TEXT })
+  password!: string;
 }

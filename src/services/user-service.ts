@@ -1,41 +1,33 @@
-import { User } from "../models/user";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import User  from "../models/user";
+import jwt from "jsonwebtoken";
+import { Repository } from "sequelize-typescript";
 
 export class UserService {
-	private lastId: number = 0;
-	private users: User[];
+	private userRepository: Repository<User>;
 	private secret: string = "lab3";
 
-	constructor() {
-		this.users = [];
-		this.addUser("admin@email.com", "admin");
-		this.addUser("e1@email.com", "email");
+	public constructor(userRepository: Repository<User>) {
+		this.userRepository = userRepository;
 	}
 
-	addUser(email: string, password: string) {
-		this.lastId++;
-
-		var user = new User(this.lastId, email, password);
-		this.users.push(user);
+	public async addUser(email: string, password: string) {
+		let user = new User({email: email, password: password});
+		await user.save();
 	}
 
-	login(email: string, password: string) {
-		var index = this.users.findIndex(
-			(u) => u.email == email && u.password == password
-		);
+	public async login(email: string, password: string) {
+		let user = await this.getUserByEmailAndPassword(email, password);
 
-		if (index !== -1) return jwt.sign({ email }, this.secret);
+		if (user != null) {
+			return jwt.sign({email}, this.secret);
+		}
 	}
 
-	getUserByEmailAndPassword(email: string, password: string): User | null {
-		const user = this.users.find(
-			(u) => u.email === email && u.password === password
-		);
-
-		return user ? user : null;
+	public async getUserByEmailAndPassword(email: string, password: string): Promise<User | null> {
+		return await this.userRepository.findOne({where: {email: email, password: password}});
 	}
 
-	isTokenValid(token: string) {
+	public isTokenValid(token: string) : boolean {
 		let verifiedToken = jwt.verify(token, this.secret);
 
 		if (verifiedToken) {
