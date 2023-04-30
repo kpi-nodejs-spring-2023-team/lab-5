@@ -2,7 +2,7 @@ import {Column, DataType, Max, Model, PrimaryKey, Table} from "sequelize-typescr
 
 @Table
 export default class User extends Model {
-  @Column({ primaryKey: true, type: DataType.INTEGER })
+  @Column({ primaryKey: true, type: DataType.INTEGER, autoIncrement: true })
   id!: number;
 
   @Max(120)

@@ -3,7 +3,7 @@ import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from "sequelize
 
 @Table
 export default class ExchangeRate extends Model {
-  @Column({ primaryKey: true, type: DataType.INTEGER })
+  @Column({ primaryKey: true, type: DataType.INTEGER, autoIncrement: true })
   id!: number;
 
   @Column({ type: DataType.INTEGER })

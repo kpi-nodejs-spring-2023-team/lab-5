@@ -3,7 +3,7 @@ import ExchangeRate from "./exchange-rate";
 
 @Table
 export default class Currency extends Model {
-  @Column({ primaryKey: true, type: DataType.INTEGER })
+  @Column({ primaryKey: true, type: DataType.INTEGER, autoIncrement: true })
   id!: number;
 
   @Max(200)

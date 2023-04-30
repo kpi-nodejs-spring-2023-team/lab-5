@@ -24,13 +24,17 @@ const sequelize = new Sequelize({
 	database: 'CurrencyExchange',
 	dialect: 'mssql',
 	username: 'idiordiev',
-	password: 'qwerty123',
+	password: 'vSMSooPOVGb29uaOt7Ik',
 	models: [__dirname + '/models'],
+	port: 55127,
 	dialectOptions: {
+		instanceName: "SQLEXPRESS",
 		encrypt: true,
-		port: 1433
+		port: 55127
 	}
 });
+
+sequelize.sync();
 
 const userRepository = sequelize.getRepository(User);
 const currencyRepository = sequelize.getRepository(Currency);
