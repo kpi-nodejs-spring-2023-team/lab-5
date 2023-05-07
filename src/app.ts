@@ -35,12 +35,6 @@ const sequelize = new Sequelize({
 	}
 });
 
-const redisClient = createClient({
-	url: 'redis://default:@localhost:6379/0'
-});
-
-redisClient.connect();
-
 sequelize.sync();
 
 const redisClient = createClient({
