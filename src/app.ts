@@ -12,6 +12,7 @@ import swaggerUi from "swagger-ui-express";
 import { Sequelize } from 'sequelize-typescript';
 import User from "./models/user";
 import ExchangeRate from "./models/exchange-rate";
+import { createClient } from 'redis';
 
 const app = express();
 const port = 3000;
@@ -33,6 +34,12 @@ const sequelize = new Sequelize({
 		port: 55127
 	}
 });
+
+const redisClient = createClient({
+	url: 'redis://default:@localhost:6379/0'
+});
+
+redisClient.connect();
 
 sequelize.sync();
 
@@ -161,6 +168,10 @@ app.get(apiUrl + "/currencies/:id/history", async (req, res) => {
 			rate: rate.rate,
 		};
 	});
+
+	let today = new Date().toISOString().slice(0, 10);
+	let redisKey = `currency-${currencyId}-${today}`
+	await redisClient.INCR(redisKey);
 
 	res.status(200).send(response);
 });

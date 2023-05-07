@@ -19,6 +19,7 @@
         "jsonwebtoken": "^9.0.0",
         "moment": "^2.29.4",
         "moment-timezone": "^0.5.43",
+        "redis": "^4.6.6",
         "reflect-metadata": "^0.1.13",
         "sequelize": "^6.31.0",
         "sequelize-typescript": "^2.1.5",
